@@ -1,5 +1,5 @@
 @echo off
-:: Media de 3 numeros
+:: Media
 :: Autor Jose antonio Serrano Hernandez
 ::Fecha 18/11/24
 set suma=%1+ %2 +%3
