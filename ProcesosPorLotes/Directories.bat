@@ -26,7 +26,7 @@ tree %userprofile%
 pause
 exit
 :op3
-echo *.txt
+dir *.txt
 pause
 exit
 :op4
