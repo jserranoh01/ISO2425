@@ -7,7 +7,7 @@ if %op% == 1 goto op1
 if %op% == 2 goto op2
 :op1
 set /p name="nombre de texto "
-echo > %name%.text
+echo > %name%.txt
 pause
 exit
 :op2
