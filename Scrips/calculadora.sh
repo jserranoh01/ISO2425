@@ -2,6 +2,7 @@
 #Jose Antonio Serrano Hernandez
 #Calculadora
 #04/02/25
+echo "Jose Antonio Serrano Hernandez"
 archivo=$1
 max=$2
 if [ $# -ne 2 ]; then
