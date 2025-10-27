@@ -1,0 +1,107 @@
+// MaskAI_Local.ino
+#include <esp_camera.h>
+#include <ESP32Servo.h>
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include "fd_forward.h"   // face detection (ESP-DL)
+#include "fr_forward.h"   // face recognition (optional)
+
+#define SERVO_EYE 13
+#define SERVO_MOUTH 14
+
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+Servo servoEye, servoMouth;
+
+camera_config_t config = {
+  .pin_pwdn = 32,
+  .pin_reset = -1,
+  .pin_xclk = 0,
+  .pin_sscb_sda = 26,
+  .pin_sscb_scl = 27,
+  .pin_d7 = 35,
+  .pin_d6 = 34,
+  .pin_d5 = 39,
+  .pin_d4 = 36,
+  .pin_d3 = 21,
+  .pin_d2 = 19,
+  .pin_d1 = 18,
+  .pin_d0 = 5,
+  .pin_vsync = 25,
+  .pin_href = 23,
+  .pin_pclk = 22,
+  .xclk_freq_hz = 20000000,
+  .ledc_timer = LEDC_TIMER_0,
+  .ledc_channel = LEDC_CHANNEL_0,
+  .pixel_format = PIXFORMAT_RGB565,
+  .frame_size = FRAMESIZE_QQVGA,
+  .jpeg_quality = 12,
+  .fb_count = 1
+};
+
+void setup() {
+  Serial.begin(115200);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("Pantalla no encontrada");
+  }
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+  display.print("Iniciando cam...");
+  display.display();
+
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.printf("Error camara 0x%x", err);
+    return;
+  }
+
+  servoEye.attach(SERVO_EYE);
+  servoMouth.attach(SERVO_MOUTH);
+  servoEye.write(90);
+  servoMouth.write(10);
+
+  dl_matrix3du_alloc(1, 160, 120, 3);  // buffer detección
+  face_detect_init(); // inicializa modelo facial
+}
+
+void loop() {
+  camera_fb_t * fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Error captura");
+    return;
+  }
+
+  box_array_t *faces = face_detect(fb->buf, fb->width, fb->height);
+  if (faces && faces->len > 0) {
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.print("Cara detectada");
+    display.display();
+
+    // Ejemplo simple: si la cara está centrada a la izquierda/derecha
+    int cx = (faces->box[0].box_p[0] + faces->box[0].box_p[2]) / 2;
+    int cy = (faces->box[0].box_p[1] + faces->box[0].box_p[3]) / 2;
+
+    int angleX = map(cx, 0, fb->width, 40, 140);
+    servoEye.write(angleX);
+
+    // Boca abierta -> placeholder (puedes añadir un detector adicional)
+    // simulamos alternar cada 2 s para prueba
+    static unsigned long t0 = millis();
+    if (millis() - t0 > 2000) {
+      static bool open = false;
+      open = !open;
+      servoMouth.write(open ? 80 : 10);
+      t0 = millis();
+    }
+  } else {
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.print("Sin rostro");
+    display.display();
+  }
+
+  esp_camera_fb_return(fb);
+  delay(100);
+}
